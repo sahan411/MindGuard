@@ -11,6 +11,7 @@ MindGuard is an academic AI prototype for:
 - Model transparency artifact: [docs/MODEL_CARD.md](docs/MODEL_CARD.md)
 - Report writing and build workflow: [report/README.md](report/README.md)
 - Team parallel development split and branch workflow: [docs/TEAM_DEVELOPMENT_SPLIT.md](docs/TEAM_DEVELOPMENT_SPLIT.md)
+- Full micro-task execution plan for both members: [docs/PROJECT_EXECUTION_TASKLIST.md](docs/PROJECT_EXECUTION_TASKLIST.md)
 
 ## Critical Safety Notice
 MindGuard is a research prototype only. It is not a clinical tool and must not be used for diagnosis or emergency intervention. If someone is in immediate danger, contact local emergency services.
