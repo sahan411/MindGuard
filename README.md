@@ -1,0 +1,51 @@
+# MindGuard
+
+MindGuard is an academic AI prototype for:
+- Multi-label emotion classification (BERT)
+- Crisis detection (VAE anomaly detector vs keyword baseline)
+- Empathetic response generation (Groq Llama-3)
+
+## Critical Safety Notice
+MindGuard is a research prototype only. It is not a clinical tool and must not be used for diagnosis or emergency intervention. If someone is in immediate danger, contact local emergency services.
+
+Sri Lanka: Lifeline 1926, CCCline 1333
+International: Crisis Text Line (text HOME to 741741)
+
+## Setup
+1. Create and activate a virtual environment
+2. Install dependencies
+3. Download spaCy model
+4. Configure environment variables
+5. Run API and UI
+
+```bash
+python -m venv venv
+# Windows
+venv\Scripts\activate
+# Mac/Linux
+source venv/bin/activate
+
+pip install -r requirements.txt
+python -m spacy download en_core_web_sm
+
+# Windows
+copy .env.example .env
+# Mac/Linux
+cp .env.example .env
+
+# edit .env and set GROQ_API_KEY
+```
+
+## Run
+```bash
+uvicorn app.main:app --reload --port 8000
+python app/ui/gradio_app.py
+```
+
+## API Endpoints
+- `POST /predict/emotion`
+- `POST /predict/crisis`
+- `POST /generate/response`
+
+## Project Layout
+Follows the specification in `MindGuard_Project_Specification.docx`.

@@ -1,0 +1,2 @@
+CRISIS_THRESHOLD = 0.65
+CRISIS_RESOURCE_SL = "Lifeline Sri Lanka: 1926"
