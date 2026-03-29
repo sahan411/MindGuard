@@ -5,6 +5,10 @@ MindGuard is an academic AI prototype for:
 - Crisis detection (VAE anomaly detector vs keyword baseline)
 - Empathetic response generation (Groq Llama-3)
 
+## Core Project Documents
+- Project architecture, scope, stack, workflow, and delivery guide: [docs/PROJECT_MASTER_GUIDE.md](docs/PROJECT_MASTER_GUIDE.md)
+- Coding rules and quality baseline: [docs/CODING_STANDARDS.md](docs/CODING_STANDARDS.md)
+
 ## Critical Safety Notice
 MindGuard is a research prototype only. It is not a clinical tool and must not be used for diagnosis or emergency intervention. If someone is in immediate danger, contact local emergency services.
 
