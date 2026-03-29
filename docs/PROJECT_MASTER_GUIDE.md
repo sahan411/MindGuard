@@ -146,6 +146,12 @@ Colab handoff requirements:
 - Record model version, data snapshot, and metrics.
 - Keep notebook deterministic and reproducible.
 
+### 8.3 Experiment Tracking from Day 1
+- Start MLflow tracking at the first baseline run (before heavy tuning).
+- Log parameters, dataset version, threshold version, and model artifact paths.
+- Keep one experiment per pipeline: emotion, crisis, response.
+- Do not run untracked "final" experiments.
+
 ## 9. Coding Standards (Industry Baseline)
 ### 9.1 General Rules
 - Follow PEP 8 and enforce with Black + Ruff.
@@ -190,17 +196,21 @@ Avoid:
 - Multi-label setup with sigmoid outputs.
 - Threshold tuned on validation set and documented.
 - Report micro-F1, macro-F1, per-label metrics.
+- Keep a threshold tuning log: date, candidate thresholds, selected value, and reason.
 
 ### 10.2 Crisis Pipeline
 - Train VAE only on non-crisis data.
 - Determine threshold from validation distribution.
 - Compare VAE vs keyword baseline on same test set.
 - Report precision, recall, F1, and threshold rationale.
+- Prefer recall-oriented operating points; justify any tradeoff that reduces recall.
+- Keep threshold changes versioned and reproducible.
 
 ### 10.3 Response Pipeline
 - Implement strategies: zero-shot, few-shot, chain-of-thought style prompting.
 - Enforce crisis-safe suffix policy.
 - Evaluate with BLEU/ROUGE and human rubric (empathy, relevance, safety).
+- Implement retry + backoff for Groq API calls and a local safe fallback response.
 
 ## 11. Git and Collaboration Workflow
 ### 11.1 Branching
@@ -234,14 +244,15 @@ A feature is done only when:
 ## 13. Implementation Plan (Practical Order)
 1. Finalize config + constants + schema contracts.
 2. Complete preprocessing service.
-3. Integrate trained BERT inference path.
-4. Integrate trained VAE inference path + keyword baseline.
-5. Build robust prompt generation and Groq fallback handling.
-6. Complete API route orchestration.
-7. Connect Gradio to API and display structured results.
-8. Add comprehensive tests.
-9. Run evaluation notebooks and log results.
-10. Freeze report artifacts and demo script.
+3. Set up MLflow tracking and baseline runs for all pipelines.
+4. Integrate trained BERT inference path.
+5. Integrate trained VAE inference path + keyword baseline.
+6. Build robust prompt generation and Groq fallback handling.
+7. Complete API route orchestration.
+8. Connect Gradio to API and polish demo UX for clarity and safety.
+9. Add comprehensive tests.
+10. Run evaluation notebooks and log results.
+11. Freeze report artifacts and demo script.
 
 ## 14. Risk Register
 - Dataset bias and language/culture limits
@@ -249,14 +260,38 @@ A feature is done only when:
 - External API downtime/rate limits
 - Inconsistent model artifact handoff from Colab
 - Scope creep near final week
+- BERT training time underestimation
+- Late dataset access/request failure
 
 Mitigations:
 - Document limitations clearly.
 - Maintain fallback behavior.
 - Keep reproducible artifact naming and versioning.
 - Track progress weekly with acceptance checkpoints.
+- Maintain a dataset fallback plan and cache snapshots.
+- Timebox BERT runs and preserve best checkpoints per run.
+- Run small pilot training before full fine-tuning.
 
-## 15. Quick Start Checklist
+## 15. Module Deliverables and Submission Controls
+The module document requires the following deliverables by deadline:
+- Final report (maximum 20 pages, excluding references and appendices)
+- Video presentation (team communication quality and equal contribution)
+- Source code submission
+
+Report structure must include at minimum:
+- Problem and motivation
+- Data and preprocessing
+- Methodology and architecture
+- Evaluation and performance metrics
+- Responsible AI, limitations, and ethics
+- References
+
+Submission controls:
+- Ensure reproducible run steps are included in report appendix.
+- Ensure references/citations follow the module-required style.
+- Keep evidence of team contribution for presentation and viva.
+
+## 16. Quick Start Checklist
 1. Create and activate virtual environment.
 2. Install requirements.
 3. Download spaCy model.
@@ -265,13 +300,20 @@ Mitigations:
 6. Start FastAPI.
 7. Start Gradio.
 
-## 16. Enforcement Checklist for Every Commit
+## 17. Enforcement Checklist for Every Commit
 - Black formatted
 - Ruff clean
 - Pytest passing
 - No secrets committed
 - Safety language preserved
 - Docs updated if behavior changed
+
+## 18. Non-Negotiable Execution Rules
+- No scope creep after the baseline architecture is stable unless approved and tracked.
+- Do not tune thresholds directly on test data.
+- Do not present unlogged experiments as final results.
+- UI quality and clarity are graded surfaces, not optional polish.
+- Include a model card before final submission.
 
 ---
 If implementation and this guide conflict, update this guide in the same PR so the team always has one consistent reference.

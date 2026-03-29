@@ -1,0 +1,154 @@
+﻿Advanced Artificial Intelligence â€“ Group Project Assignment
+Duration:
+ 4â€“6 weeks
+Deliverables
+Students must submit the following by the project deadline:
+Final Report
+ (Maximum 20 pages, excluding references and appendices)
+Demonstrable Output
+ (Research findings or functional AI product)
+Associated Python Code/Notebooks
+ (Well-documented and reproducible)
+Video Presentation
+ (5 minutes maximum)
+Objective
+Apply the concepts learned in the Advanced AI course to solve a real-world problem by implementing at least three of the following techniques:
+Required Techniques (Select minimum 3):
+Natural Language Processing (NLP)
+Text pre-processing and post-processing
+Word embedding methods (Word2Vec, 
+GloVe
+, 
+FastText
+, etc.)
+Transformer-based Models or Large Language Models (LLMs)
+BERT, GPT, T5, or similar architectures
+Fine-tuning or transfer learning approaches
+Generative AI
+Autoencoders (VAE, DAE)
+Generative Adversarial Networks (GANs)
+Diffusion models
+Model Training Approaches
+One-shot learning
+Few-shot 
+learning
+Transfer 
+learning
+Prompt Engineering
+Systematic prompt design and optimization
+Chain-of-thought 
+prompting
+In-context learning strategies
+Suggested Industry Domains
+Select one domain for your project. You may propose your own domain if it aligns with course objectives.
+Domain
+Example Project Ideas
+Healthcare
+Symptom checker, diagnosis assistant, medical document summarization, patient record analysis
+Energy
+Smart energy usage forecasting, anomaly detection from sensor logs, renewable energy optimization
+Manufacturing
+Quality defect detection using GANs, maintenance log NLP analysis, predictive maintenance systems
+Banking & Finance
+Financial document summarization, fraud detection, customer segmentation, automated report generation
+Telecommunications
+Customer support chatbot, spam message classification, network anomaly detection
+Media & Entertainment
+Text-to-story generators, auto-subtitling systems, content recommendation, meme generation
+Transportation
+Trip review summarizer, route recommendation engine, incident report analysis, traffic prediction
+Dataset Resources
+You may use publicly available datasets from the following sources:
+Kaggle
+ - 
+https://www.kaggle.com/datasets
+UCI Machine Learning Repository
+ - 
+https://archive.ics.uci.edu/ml
+OpenML
+ - 
+https://www.openml.org
+Hugging Face Datasets
+ - 
+https://huggingface.co/datasets
+If you use proprietary or custom datasets, you must obtain appropriate permissions and document your data collection methodology.
+Project Report Structure
+Your final report should include the following sections:
+Executive Summary
+ (1 page)
+Problem Statement & Motivation
+Literature Review
+ (Related work and existing solutions)
+Methodology
+ (Detailed explanation of your approach and AI techniques used)
+Implementation Details
+ (Architecture, algorithms, tools, and frameworks)
+Experimental Setup & Results
+Evaluation & Performance Metrics
+ (Quantitative and qualitative analysis)
+Discussion
+ (Limitations, challenges, and lessons learned)
+Conclusion & Future Work
+References
+ (APA format)
+Appendices
+ (Code snippets, additional charts, team contribution breakdown)
+Evaluation Criteria
+Your project will be evaluated based on the following criteria:
+Criteria
+Points
+Description
+Problem Relevance & Scope
+10
+Clarity of problem definition, real-world applicability, and appropriate scope
+Use of AI Techniques from Advanced AI Module
+20
+Correct implementation of course concepts, depth of technical understanding
+Model Implementation & Creativity
+20
+Code quality, innovative approaches, proper use of frameworks and tools
+Evaluation & Performance Metrics
+15
+Appropriate metrics, thorough analysis, comparison with baselines
+Final Report Quality
+15
+Clarity of writing, logical structure, completeness, professional presentation
+Working Demo/Product
+15
+Functionality, usability, demonstration of technical competence
+Team Collaboration & Presentation
+5
+Video quality, communication skills, equal contribution from team members
+Total
+100
+Submission Guidelines
+Code Submission:
+All code must be well-documented with clear 
+comments
+Include a README file with setup instructions and 
+dependencies
+Jupyter
+ Notebooks must have markdown explanations for each major 
+step
+Code should be reproducible with provided 
+datasets
+Video Presentation:
+Maximum 5 minutes duration
+Cover: problem statement, approach, key results, and demonstration
+All team members should 
+participate
+Upload to a video platform and provide a shareable 
+link
+Report Formatting:
+Font: Times New Roman, 12pt
+Line spacing: 
+1.5
+Margins: 1 inch on all sides
+Include page numbers and section 
+headings
+References & Citations
+All citations and references must follow 
+APA Style (7th edition)
+.
+For guidance on APA formatting, refer to: 
+https://apastyle.apa.org

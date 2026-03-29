@@ -8,6 +8,8 @@ MindGuard is an academic AI prototype for:
 ## Core Project Documents
 - Project architecture, scope, stack, workflow, and delivery guide: [docs/PROJECT_MASTER_GUIDE.md](docs/PROJECT_MASTER_GUIDE.md)
 - Coding rules and quality baseline: [docs/CODING_STANDARDS.md](docs/CODING_STANDARDS.md)
+- Model transparency artifact: [docs/MODEL_CARD.md](docs/MODEL_CARD.md)
+- Report writing and build workflow: [report/README.md](report/README.md)
 
 ## Critical Safety Notice
 MindGuard is a research prototype only. It is not a clinical tool and must not be used for diagnosis or emergency intervention. If someone is in immediate danger, contact local emergency services.
