@@ -15,7 +15,9 @@ class Settings(BaseSettings):
     groq_model: str = "llama-3.1-8b-instant"
     groq_timeout_seconds: int = Field(default=30, ge=1, le=180)
 
-    default_response_strategy: Literal["zero_shot", "few_shot", "chain_of_thought"] = "few_shot"
+    default_response_strategy: Literal["zero_shot", "few_shot", "chain_of_thought"] = (
+        "few_shot"
+    )
     default_crisis_threshold: float = Field(default=0.65, gt=0.0)
     emotion_top_k: int = Field(default=3, ge=1, le=10)
 

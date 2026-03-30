@@ -2,7 +2,6 @@ import re
 import unicodedata
 from typing import Any, Dict
 
-
 _WHITESPACE_RE = re.compile(r"\s+")
 _NOISE_RE = re.compile(r"[^a-z0-9\s.,!?\-']")
 
