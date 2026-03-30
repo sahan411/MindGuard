@@ -1,4 +1,5 @@
 from app.models.bert_classifier import BertEmotionClassifier
+from app.services.nlp_preprocessor import prepare_text
 
 
 class EmotionService:
@@ -6,4 +7,5 @@ class EmotionService:
         self.model = BertEmotionClassifier()
 
     def predict(self, text: str) -> dict:
-        return self.model.predict(text)
+        payload = prepare_text(text)
+        return self.model.predict(payload["model_text"])
