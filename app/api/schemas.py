@@ -34,6 +34,7 @@ class CrisisResponse(BaseModel):
     threshold: Annotated[float, Field(gt=0.0)]
     method: Literal["vae", "keyword", "fallback"]
     keyword_match: bool
+    crisis_guidance_required: bool
 
 
 class GenerateRequest(BaseModel):
