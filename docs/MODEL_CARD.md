@@ -90,17 +90,40 @@ Mitigations:
 
 ## 10. Artifacts and Versioning
 Record final artifacts here before submission:
-- Emotion model file:
-- Crisis model file:
+- Emotion model file: `models/bert_emotion/smoke_best_model_tiny`
+- Crisis model file: `models/vae_crisis_smoke/vae_state_dict.pt`
 - Tokenizer/config versions:
+	- Emotion tokenizer: DistilBERT tokenizer saved under `models/bert_emotion/smoke_best_model_tiny`
+	- VAE vectorizer vocabulary: `models/vae_crisis_smoke/tfidf_vocabulary.json`
 - Dataset snapshot IDs:
+	- GoEmotions (simplified): `google-research-datasets/go_emotions`
+	- AMOD counseling conversations: `Amod/mental_health_counseling_conversations`
 - MLflow run IDs:
+	- Emotion run: `664db6558d2648ccb5481fab8848b57b`
+	- Crisis run: logged under `mindguard-vae-crisis` (see `data/processed/vae_threshold_summary_smoke.json`)
 
 ## 11. Results Summary (To Fill)
-- Final emotion model metrics:
-- Final crisis model metrics:
-- Baseline comparison summary:
+- Final emotion model metrics (current smoke run):
+	- Validation micro-F1: 0.0947
+	- Validation macro-F1: 0.0319
+	- Test micro-F1: 0.1201
+	- Test macro-F1: 0.0375
+- Final crisis model metrics (current smoke run):
+	- Precision: 0.0000
+	- Recall: 0.0000
+	- F1: 0.0000
+	- Threshold percentile/value: 95.0 / 0.001951873884536326
+- Baseline comparison summary (current smoke run):
+	- VAE baseline: precision=0.0, recall=0.0, f1=0.0
+	- Keyword baseline: precision=0.0, recall=0.0, f1=0.0
+	- Explanation: this run used a non-crisis-only source (`data/raw/amod_mh_counseling/train.jsonl`) and therefore does not yet provide representative crisis discrimination performance.
 - Response quality summary:
+	- Prompt/orchestration behavior validated via fallback and crisis guidance tests.
+	- Human rubric scoring still pending final integrated run.
+
+## 13. Current Evidence Scope
+- Current metrics above are from smoke artifacts to validate pipeline reproducibility and integration paths.
+- Before final submission, rerun crisis evaluation on a dataset containing positive crisis labels and update this card with final non-smoke metrics.
 
 ## 12. Approval and Sign-off
 Team members:
