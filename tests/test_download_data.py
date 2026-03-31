@@ -21,7 +21,7 @@ def test_validate_go_emotions_accepts_valid_labels() -> None:
         {
             "text": ["sample"],
             "labels": [[1, 5]],
-            "comment_id": ["abc"],
+            "id": ["abc"],
         }
     )
     _validate_go_emotions(df)
@@ -32,7 +32,18 @@ def test_validate_go_emotions_rejects_invalid_labels() -> None:
         {
             "text": ["sample"],
             "labels": [[99]],
-            "comment_id": ["abc"],
+            "id": ["abc"],
+        }
+    )
+    with pytest.raises(ValueError):
+        _validate_go_emotions(df)
+
+
+def test_validate_go_emotions_requires_id_or_comment_id() -> None:
+    df = pd.DataFrame(
+        {
+            "text": ["sample"],
+            "labels": [[1]],
         }
     )
     with pytest.raises(ValueError):

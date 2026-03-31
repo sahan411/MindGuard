@@ -11,7 +11,7 @@ from typing import Dict, List
 import mlflow
 import numpy as np
 import torch
-from datasets import DatasetDict, load_dataset
+from datasets import DatasetDict, Sequence, Value, load_dataset
 from sklearn.metrics import f1_score
 from transformers import (
     AutoModelForSequenceClassification,
@@ -195,10 +195,14 @@ def main() -> None:
     encoded_dataset = dataset.map(
         preprocess, batched=True, remove_columns=dataset["train"].column_names
     )
+    encoded_dataset = encoded_dataset.cast_column(
+        "labels", Sequence(feature=Value(dtype="float32"))
+    )
 
     model = AutoModelForSequenceClassification.from_pretrained(
         config.model_name,
         num_labels=num_labels,
+        ignore_mismatched_sizes=True,
         problem_type="multi_label_classification",
         id2label={i: label for i, label in enumerate(GO_EMOTIONS_LABELS)},
         label2id={label: i for i, label in enumerate(GO_EMOTIONS_LABELS)},
@@ -229,7 +233,6 @@ def main() -> None:
         args=training_args,
         train_dataset=encoded_dataset["train"],
         eval_dataset=encoded_dataset["validation"],
-        tokenizer=tokenizer,
         data_collator=DataCollatorWithPadding(tokenizer=tokenizer),
         compute_metrics=_compute_metrics,
     )

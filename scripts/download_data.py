@@ -4,6 +4,7 @@ import argparse
 import json
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from numbers import Integral
 from pathlib import Path
 from typing import Callable, Dict, List
 
@@ -27,12 +28,24 @@ def _validate_non_empty(df: pd.DataFrame, dataset_name: str) -> None:
 def _validate_go_emotions(df: pd.DataFrame) -> None:
     _validate_non_empty(df, "go_emotions")
 
+    if "id" not in df.columns and "comment_id" not in df.columns:
+        raise ValueError("go_emotions: expected either 'id' or 'comment_id' column")
+
     invalid_rows: List[int] = []
     for idx, labels in enumerate(df["labels"]):
-        if not isinstance(labels, list) or len(labels) == 0:
+        if not hasattr(labels, "__iter__"):
             invalid_rows.append(idx)
             continue
-        if not all(isinstance(label, int) and 0 <= label <= 27 for label in labels):
+
+        labels_list = list(labels)
+        if len(labels_list) == 0:
+            invalid_rows.append(idx)
+            continue
+
+        if not all(
+            isinstance(label, Integral) and 0 <= int(label) <= 27
+            for label in labels_list
+        ):
             invalid_rows.append(idx)
 
     if invalid_rows:
@@ -67,7 +80,7 @@ DATASETS: Dict[str, DatasetSpec] = {
     "go_emotions": DatasetSpec(
         dataset_id="google-research-datasets/go_emotions",
         config_name="simplified",
-        required_columns=["text", "labels", "comment_id"],
+        required_columns=["text", "labels"],
         validator=_validate_go_emotions,
     ),
     "amod_mh_counseling": DatasetSpec(
@@ -117,6 +130,17 @@ def _process_dataset(dataset_key: str, raw_root: Path) -> Dict[str, object]:
 
     for split_name, split_data in dataset_dict.items():
         df = split_data.to_pandas()
+        dropped_empty_rows = 0
+
+        if dataset_key == "amod_mh_counseling":
+            before_rows = len(df)
+            df = df.dropna(subset=["Context", "Response"]).copy()
+            df = df[
+                (df["Context"].astype(str).str.strip() != "")
+                & (df["Response"].astype(str).str.strip() != "")
+            ].copy()
+            dropped_empty_rows = before_rows - len(df)
+
         _ensure_required_columns(df, spec.required_columns, dataset_key)
         spec.validator(df)
 
@@ -125,6 +149,7 @@ def _process_dataset(dataset_key: str, raw_root: Path) -> Dict[str, object]:
 
         split_summaries[split_name] = {
             "rows": len(df),
+            "dropped_empty_rows": dropped_empty_rows,
             "columns": list(df.columns),
             "output": str(output_path.as_posix()),
         }
