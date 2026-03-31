@@ -62,9 +62,7 @@ def analyze_text(text: str) -> Tuple[str, List[List[str]], str, str, str]:
 def build_demo() -> gr.Blocks:
     with gr.Blocks(title="MindGuard", theme=gr.themes.Soft()) as demo:
         gr.Markdown("# MindGuard")
-        gr.Markdown(
-            "Emotion-aware, crisis-aware response support for academic use."
-        )
+        gr.Markdown("Emotion-aware, crisis-aware response support for academic use.")
         gr.Markdown(f"**Safety Notice:** {SAFETY_DISCLAIMER_TEXT}")
 
         with gr.Column():

@@ -12,7 +12,9 @@ def predict_emotion(payload: TextRequest) -> EmotionResponse:
     try:
         prediction = emotion_service.predict(payload.text)
     except Exception as exc:  # pragma: no cover - defensive guard
-        raise HTTPException(status_code=500, detail="emotion_prediction_failed") from exc
+        raise HTTPException(
+            status_code=500, detail="emotion_prediction_failed"
+        ) from exc
 
     emotions_raw = prediction.get("emotions", [])
     emotions = [
