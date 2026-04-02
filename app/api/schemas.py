@@ -1,38 +1,57 @@
-from typing import List
+from typing import Annotated, List, Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class TextRequest(BaseModel):
-    text: str
+    """Input payload for routes that only require user text."""
+
+    text: Annotated[
+        str,
+        Field(min_length=1, max_length=4000, description="User input text."),
+    ]
 
 
 class EmotionScore(BaseModel):
+    """Single emotion probability output."""
+
     label: str
-    confidence: float
+    confidence: Annotated[float, Field(ge=0.0, le=1.0)]
 
 
 class EmotionResponse(BaseModel):
-    emotions: List[EmotionScore]
-    top_emotion: str
+    """Emotion prediction payload returned by the API."""
+
+    emotions: Annotated[List[EmotionScore], Field(min_length=1, max_length=10)]
+    top_emotion: Annotated[str, Field(min_length=1, max_length=64)]
 
 
 class CrisisResponse(BaseModel):
+    """Crisis prediction payload returned by the API."""
+
     crisis_detected: bool
-    reconstruction_error: float
-    threshold: float
-    method: str
+    reconstruction_error: Annotated[float, Field(ge=0.0)]
+    threshold: Annotated[float, Field(gt=0.0)]
+    method: Literal["vae", "keyword", "fallback"]
     keyword_match: bool
+    crisis_guidance_required: bool
 
 
 class GenerateRequest(BaseModel):
-    text: str
-    top_emotion: str
+    """Input payload for empathetic response generation."""
+
+    text: Annotated[
+        str,
+        Field(min_length=1, max_length=4000, description="User input text."),
+    ]
+    top_emotion: Annotated[str, Field(min_length=1, max_length=64)]
     crisis: bool
-    strategy: str = "few_shot"
+    strategy: Literal["zero_shot", "few_shot", "chain_of_thought"] = "few_shot"
 
 
 class GenerateResponse(BaseModel):
+    """Generated response payload with safety metadata."""
+
     response: str
-    crisis_resource: str
-    strategy_used: str
+    crisis_resource: str = ""
+    strategy_used: Literal["zero_shot", "few_shot", "chain_of_thought"]

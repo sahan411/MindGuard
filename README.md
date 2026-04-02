@@ -12,6 +12,9 @@ MindGuard is an academic AI prototype for:
 - Report writing and build workflow: [report/README.md](report/README.md)
 - Team parallel development split and branch workflow: [docs/TEAM_DEVELOPMENT_SPLIT.md](docs/TEAM_DEVELOPMENT_SPLIT.md)
 - Full micro-task execution plan for both members: [docs/PROJECT_EXECUTION_TASKLIST.md](docs/PROJECT_EXECUTION_TASKLIST.md)
+- Dataset licensing and allowed-use registry: [docs/DATASET_REGISTRY.md](docs/DATASET_REGISTRY.md)
+- Artifact inventory, run IDs, and reproducibility snapshot: [docs/ARTIFACT_MANIFEST.md](docs/ARTIFACT_MANIFEST.md)
+- Integration contract from data/eval track to API track (B5 -> A6): [docs/INTEGRATION_HANDOFF.md](docs/INTEGRATION_HANDOFF.md)
 
 ## Critical Safety Notice
 MindGuard is a research prototype only. It is not a clinical tool and must not be used for diagnosis or emergency intervention. If someone is in immediate danger, contact local emergency services.
