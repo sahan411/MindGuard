@@ -22,6 +22,7 @@ class EmotionService:
     def predict(self, text: str) -> Dict[str, object]:
         payload = prepare_text(text)
 
+        # Keep API behavior stable even when model loading fails at startup.
         if self.model is None:
             return self._fallback_prediction()
 
@@ -57,6 +58,7 @@ class EmotionService:
             normalized.append(
                 {
                     "label": label,
+                    # Clamp to [0, 1] because downstream contracts assume valid probability bounds.
                     "confidence": min(max(score, 0.0), 1.0),
                 }
             )
@@ -68,6 +70,7 @@ class EmotionService:
         top_k = settings.emotion_top_k or EMOTION_TOP_K_DEFAULT
         limited = normalized[:top_k]
         top_emotion = raw_output.get("top_emotion")
+        # Prefer model-provided top label when valid; otherwise derive from ranked scores.
         if not isinstance(top_emotion, str) or top_emotion == "":
             top_emotion = str(limited[0]["label"])
 

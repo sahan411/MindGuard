@@ -13,6 +13,7 @@ class CrisisService:
 
     def __init__(self) -> None:
         self.model = None
+        # Preserve a safe default threshold when runtime configuration is missing.
         self.threshold = settings.default_crisis_threshold or CRISIS_THRESHOLD
 
         try:
@@ -38,6 +39,7 @@ class CrisisService:
         else:
             method = "fallback"
 
+        # Safety policy is recall-oriented: a positive signal from either path triggers guidance.
         crisis_detected = vae_detected or keyword_match
 
         return {

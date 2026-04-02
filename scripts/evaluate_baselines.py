@@ -87,9 +87,11 @@ def main() -> None:
     errors_df = pd.read_csv(args.vae_errors)
     required_columns = {"text", "is_crisis", "predicted_crisis", "reconstruction_error"}
     missing = required_columns.difference(errors_df.columns)
+    # Fail fast on schema drift so report numbers are reproducible across runs.
     if missing:
         raise ValueError(f"Missing required VAE errors columns: {sorted(missing)}")
 
+    # Use a transparent lexical baseline to contextualize the learned detector's gains.
     errors_df["keyword_predicted"] = (
         errors_df["text"].astype(str).apply(_keyword_baseline_predict)
     )
@@ -102,6 +104,7 @@ def main() -> None:
     keyword_metrics = _prf(y_true, keyword_pred)
 
     threshold_data = vae_summary.get("threshold", {})
+    # Persist threshold provenance because this cutoff directly controls recall/precision tradeoff.
     threshold_rationale = {
         "threshold_percentile": threshold_data.get("percentile"),
         "threshold_value": threshold_data.get("value"),
@@ -130,6 +133,7 @@ def main() -> None:
     f1_values = [vae_metrics["f1"], keyword_metrics["f1"]]
     recall_values = [vae_metrics["recall"], keyword_metrics["recall"]]
 
+    # Plot both F1 and recall to expose the safety-critical tradeoff, not a single score only.
     x = range(len(methods))
     ax.bar([i - 0.15 for i in x], f1_values, width=0.3, label="F1")
     ax.bar([i + 0.15 for i in x], recall_values, width=0.3, label="Recall")
