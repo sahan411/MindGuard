@@ -9,12 +9,13 @@ _MIN_CHARS: int = 3
 _WHITESPACE_RE = re.compile(r"\s+")
 _NOISE_RE = re.compile(r"[^a-z0-9\s.,!?\-']")
 
+
 def normalize_text(text: str) -> str:
     """Normalise text for downstream NLP processing."""
     if not isinstance(text, str):
         raise TypeError(f"Expected str, got {type(text).__name__!r}")
 
-    text = unicodedata.normalize("NFKC", text)
+    text = unicodedata.normalize("NFKD", text)
     text = "".join(ch for ch in text if not unicodedata.combining(ch))
     text = text.encode("ascii", "ignore").decode("ascii")
     text = text.lower()
@@ -25,8 +26,9 @@ def normalize_text(text: str) -> str:
     if not text:
         raise ValueError("Text is empty after normalisation.")
     if len(text.replace(" ", "")) < _MIN_CHARS:
-        raise ValueError(f"Text is too short after normalisation.")
+        raise ValueError("Text is too short after normalisation.")
     return text
+
 
 def prepare_text(text: str) -> Dict[str, Any]:
     """Build a stable preprocessing payload consumed by downstream services."""
@@ -34,7 +36,7 @@ def prepare_text(text: str) -> Dict[str, Any]:
         normalized_text = normalize_text(text)
     except (TypeError, ValueError):
         normalized_text = ""
-        
+
     token_count = len(normalized_text.split()) if normalized_text else 0
     is_empty = token_count == 0
     is_short = token_count < 3
