@@ -10,7 +10,9 @@ router = APIRouter()
 @router.post("/response", response_model=GenerateResponse)
 def generate_response(payload: GenerateRequest) -> GenerateResponse:
     """Generate an empathetic response conditioned on emotion and crisis state."""
-    text = build_response(payload.text, payload.top_emotion, payload.crisis, payload.strategy)
+    text = build_response(
+        payload.text, payload.top_emotion, payload.crisis, payload.strategy
+    )
     return GenerateResponse(
         response=text,
         crisis_resource=CRISIS_RESOURCE_SL if payload.crisis else "",
