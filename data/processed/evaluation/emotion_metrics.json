@@ -1,0 +1,22 @@
+{
+  "eval_metrics": {
+    "eval_loss": 0.08419425040483475,
+    "eval_micro_f1": 0.570229434806939,
+    "eval_macro_f1": 0.4071798887357204,
+    "eval_runtime": 6.147,
+    "eval_samples_per_second": 882.706,
+    "eval_steps_per_second": 27.656,
+    "epoch": 3.0
+  },
+  "test_metrics": {
+    "test_loss": 0.0832303911447525,
+    "test_micro_f1": 0.5754200490843874,
+    "test_macro_f1": 0.4183391166332177,
+    "test_runtime": 6.147,
+    "test_samples_per_second": 882.866,
+    "test_steps_per_second": 27.656,
+    "epoch": 3.0
+  },
+  "best_model_dir": "models/bert_emotion/final_best_model",
+  "mlflow_run_id": "2d3d7cd9f0324f8e93250ae2b33ea0a8"
+}
