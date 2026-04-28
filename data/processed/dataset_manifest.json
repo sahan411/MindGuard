@@ -1,0 +1,41 @@
+{
+  "generated_at_utc": "2026-04-05T14:03:04.478341+00:00",
+  "datasets": {
+    "go_emotions": {
+      "dataset_id": "google-research-datasets/go_emotions",
+      "config_name": "simplified",
+      "splits": {
+        "train": {
+          "rows": 43410,
+          "dropped_empty_rows": 0,
+          "columns": [
+            "text",
+            "labels",
+            "id"
+          ],
+          "output": "data/raw/go_emotions/train.jsonl"
+        },
+        "validation": {
+          "rows": 5426,
+          "dropped_empty_rows": 0,
+          "columns": [
+            "text",
+            "labels",
+            "id"
+          ],
+          "output": "data/raw/go_emotions/validation.jsonl"
+        },
+        "test": {
+          "rows": 5427,
+          "dropped_empty_rows": 0,
+          "columns": [
+            "text",
+            "labels",
+            "id"
+          ],
+          "output": "data/raw/go_emotions/test.jsonl"
+        }
+      }
+    }
+  }
+}
