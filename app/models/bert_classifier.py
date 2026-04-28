@@ -1,9 +1,17 @@
 from __future__ import annotations
 
+import json
+import logging
+from pathlib import Path
 from typing import Dict, List
 
 from app.core.config import settings
 from app.core.constants import EMOTION_TOP_K_DEFAULT
+
+logger = logging.getLogger(__name__)
+
+# Path where the trained model is expected after Colab training.
+_MODEL_DIR = Path("models/bert_emotion/best_model")
 
 
 class BertEmotionClassifier:
@@ -12,13 +20,95 @@ class BertEmotionClassifier:
     def __init__(self) -> None:
         self.model_loaded = False
         self.model_error: str | None = None
+        self._model = None
+        self._tokenizer = None
+        self._label_list: List[str] = []
 
-        # Placeholder: real model artifact loading is added in the training-integration phase.
-        self.model_loaded = False
+        try:
+            self._try_load_model()
+        except Exception as exc:
+            self.model_error = str(exc)
+            self.model_loaded = False
+            logger.warning("BERT model not loaded, using keyword fallback: %s", exc)
+
+    def _try_load_model(self) -> None:
+        """Attempt to load the trained model from disk."""
+        config_path = _MODEL_DIR / "config.json"
+        if not config_path.exists():
+            raise FileNotFoundError(
+                f"No trained model found at {_MODEL_DIR}. "
+                "Train the model using notebooks/train_bert_colab.ipynb first."
+            )
+
+        # Load label map if available, otherwise derive from config.json
+        label_map_path = _MODEL_DIR / "label_map.json"
+        if label_map_path.exists():
+            raw = json.loads(label_map_path.read_text(encoding="utf-8"))
+            self._label_list = raw.get("labels", [])
+
+        import torch
+        from transformers import AutoModelForSequenceClassification, AutoTokenizer
+
+        self._tokenizer = AutoTokenizer.from_pretrained(str(_MODEL_DIR))
+        self._model = AutoModelForSequenceClassification.from_pretrained(str(_MODEL_DIR))
+        self._model.eval()
+
+        # If we didn't get labels from label_map.json, read from the model config
+        if not self._label_list and hasattr(self._model.config, "id2label"):
+            id2label = self._model.config.id2label
+            self._label_list = [id2label[i] for i in sorted(id2label.keys())]
+
+        self.model_loaded = True
+        logger.info("BERT emotion model loaded successfully from %s", _MODEL_DIR)
 
     def predict(self, text: str) -> Dict[str, object]:
         """Return top emotion plus sorted emotion scores for the given text."""
-        return self._keyword_fallback(text)
+        if not self.model_loaded or self._model is None:
+            return self._keyword_fallback(text)
+
+        try:
+            return self._model_predict(text)
+        except Exception as exc:
+            logger.warning("BERT inference failed, using fallback: %s", exc)
+            return self._keyword_fallback(text)
+
+    def _model_predict(self, text: str) -> Dict[str, object]:
+        """Run actual BERT inference with manual tokenization."""
+        import torch
+
+        inputs = self._tokenizer(
+            text, truncation=True, max_length=128, return_tensors="pt"
+        )
+        # DistilBERT does not accept token_type_ids — remove if present
+        inputs.pop("token_type_ids", None)
+
+        with torch.no_grad():
+            outputs = self._model(**inputs)
+
+        # Apply sigmoid for multi-label probabilities
+        probs = torch.sigmoid(outputs.logits[0]).tolist()
+
+        # Build label → score mapping
+        id2label = self._model.config.id2label
+        scored = [
+            {"label": id2label[i], "score": probs[i]}
+            for i in range(len(probs))
+        ]
+        sorted_results = sorted(scored, key=lambda x: x["score"], reverse=True)
+
+        top_k = settings.emotion_top_k or EMOTION_TOP_K_DEFAULT
+        top_emotions: List[Dict[str, object]] = [
+            {
+                "label": item["label"],
+                "confidence": round(min(max(float(item["score"]), 0.0), 1.0), 4),
+            }
+            for item in sorted_results[:top_k]
+        ]
+
+        return {
+            "emotions": top_emotions,
+            "top_emotion": top_emotions[0]["label"] if top_emotions else "neutral",
+        }
 
     def _keyword_fallback(self, text: str) -> Dict[str, object]:
         lowered = text.lower()
