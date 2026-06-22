@@ -1,8 +1,14 @@
 from __future__ import annotations
 
+import sys
+from pathlib import Path
 from typing import List, Tuple
 
 import gradio as gr
+
+# Allow running via `python app/ui/gradio_app.py` from project root.
+if __package__ is None or __package__ == "":
+    sys.path.append(str(Path(__file__).resolve().parents[2]))
 
 from app.core.config import settings
 from app.core.constants import CRISIS_RESOURCE_TEXT, SAFETY_DISCLAIMER_TEXT
@@ -60,7 +66,7 @@ def analyze_text(text: str) -> Tuple[str, List[List[str]], str, str, str]:
 
 
 def build_demo() -> gr.Blocks:
-    with gr.Blocks(title="MindGuard", theme=gr.themes.Soft()) as demo:
+    with gr.Blocks(title="MindGuard") as demo:
         gr.Markdown("# MindGuard")
         gr.Markdown("Emotion-aware, crisis-aware response support for academic use.")
         gr.Markdown(f"**Safety Notice:** {SAFETY_DISCLAIMER_TEXT}")
@@ -113,4 +119,4 @@ def build_demo() -> gr.Blocks:
 
 
 if __name__ == "__main__":
-    build_demo().launch()
+    build_demo().launch(theme=gr.themes.Soft())
