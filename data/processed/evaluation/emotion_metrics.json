@@ -1,0 +1,20 @@
+{
+  "eval_metrics": {
+    "eval_loss": 0.0,
+    "eval_micro_f1": 0.5680230933978955,
+    "eval_macro_f1": 0.40368448977724425,
+    "eval_runtime": 0.0,
+    "eval_samples_per_second": 0.0,
+    "eval_steps_per_second": 0.0
+  },
+  "test_metrics": {
+    "test_loss": 0.0,
+    "test_micro_f1": 0.5746388443017657,
+    "test_macro_f1": 0.4157909150664968,
+    "test_runtime": 0.0,
+    "test_samples_per_second": 0.0,
+    "test_steps_per_second": 0.0
+  },
+  "best_model_dir": "models/bert_emotion/best_model",
+  "mlflow_run_id": "local-reconstruction-from-training-summary"
+}
