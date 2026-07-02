@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 from typing import Optional
 
@@ -10,6 +11,16 @@ import torch.nn as nn
 from sklearn.feature_extraction.text import TfidfVectorizer
 
 from app.core.constants import CRISIS_THRESHOLD
+
+logger = logging.getLogger(__name__)
+
+_DEFAULT_MODEL_DIR  = "models/vae_crisis_final"
+_DEFAULT_SUMMARY    = "data/processed/vae_threshold_summary.json"
+
+# VAE architecture — must match train_vae.py exactly.
+_HIDDEN_DIM  = 256
+_LATENT_DIM  = 32
+_MAX_FEATURES = 4000
 
 
 class TextVAE(nn.Module):
@@ -37,85 +48,142 @@ class TextVAE(nn.Module):
 
 
 class VAEDetector:
-    """VAE-based reconstruction-error detector.
+    """VAE-based crisis detector with keyword-baseline fallback.
 
-    Attempts to load a trained VAE state dict and a TF-IDF vocabulary. If the
-    expected artifacts are not present a FileNotFoundError is raised so callers
-    can fall back to a safe alternative.
+    Loads the TF-IDF vectorizer vocabulary and the trained VAE state dict
+    produced by scripts/train_vae.py. When the artifacts are absent, or
+    loading fails for any reason, the detector falls back to a conservative
+    keyword heuristic so the service stays functional for demo / development
+    without weights.
     """
 
     def __init__(
         self,
         model_dir: Optional[str] = None,
-        stats_path: Optional[str] = None,
+        summary_path: Optional[str] = None,
         device: Optional[str] = None,
     ) -> None:
-        model_dir = Path(model_dir or "models/vae_crisis")
-        state_path = model_dir / "vae_state_dict.pt"
-        vocab_path = model_dir / "tfidf_vocabulary.json"
+        self.model_loaded = False
+        self.model_error:  Optional[str] = None
+        self._model        = None
+        self._vectorizer    = None
+        self._device        = torch.device(device or ("cuda" if torch.cuda.is_available() else "cpu"))
+        self._threshold     = CRISIS_THRESHOLD  # fallback default
 
-        if not state_path.exists() or not vocab_path.exists():
-            raise FileNotFoundError(
-                f"VAE artifacts not found in {model_dir}. Expected files: {state_path.name}, {vocab_path.name}"
+        summary_file = Path(summary_path or _DEFAULT_SUMMARY)
+        if summary_file.exists():
+            try:
+                data = json.loads(summary_file.read_text(encoding="utf-8"))
+                self._threshold = float(data["threshold"]["value"])
+            except Exception as exc:
+                logger.warning("Could not read VAE threshold from summary: %s", exc)
+
+        dir_path = Path(model_dir or _DEFAULT_MODEL_DIR)
+        if dir_path.exists():
+            self._try_load(dir_path)
+        else:
+            self.model_error = f"VAE model directory not found: {dir_path}"
+            logger.warning("VAE model not found at %s — using keyword fallback.", dir_path)
+
+    # ------------------------------------------------------------------
+    # Loading
+    # ------------------------------------------------------------------
+
+    def _try_load(self, dir_path: Path) -> None:
+        try:
+            vocab_path = dir_path / "tfidf_vocabulary.json"
+            if not vocab_path.exists():
+                raise FileNotFoundError(f"TF-IDF vocabulary not found: {vocab_path}")
+
+            vocab: dict = json.loads(vocab_path.read_text(encoding="utf-8"))
+            vectorizer = TfidfVectorizer(
+                max_features=_MAX_FEATURES,
+                vocabulary={token: int(idx) for token, idx in vocab.items()},
+            )
+            # Mark as fitted so transform() works without calling fit() on a corpus.
+            vectorizer._validate_vocabulary()
+            self._vectorizer = vectorizer
+
+            state_dict_path = dir_path / "vae_state_dict.pt"
+            if not state_dict_path.exists():
+                raise FileNotFoundError(f"VAE state dict not found: {state_dict_path}")
+
+            state = torch.load(str(state_dict_path), map_location="cpu", weights_only=True)
+
+            # Prefer inferring dimensions from the saved weights themselves —
+            # more robust than trusting hardcoded constants to stay in sync
+            # with whatever train_vae.py was actually run with.
+            enc_w = None
+            mu_w = None
+            for key, value in state.items():
+                if key.endswith("encoder.0.weight"):
+                    enc_w = value
+                if key.endswith("mu_layer.weight"):
+                    mu_w = value
+
+            if enc_w is not None and mu_w is not None:
+                hidden_dim = int(enc_w.shape[0])
+                input_dim = int(enc_w.shape[1])
+                latent_dim = int(mu_w.shape[0])
+            else:
+                # Fall back to the module-level constants if the state dict
+                # doesn't expose the expected keys.
+                hidden_dim, latent_dim = _HIDDEN_DIM, _LATENT_DIM
+                input_dim = len(vocab)
+
+            model_instance = TextVAE(input_dim=input_dim, hidden_dim=hidden_dim, latent_dim=latent_dim)
+            model_instance.load_state_dict(state)
+            model_instance.to(self._device)
+            model_instance.eval()
+
+            self._model = model_instance
+            self.model_loaded = True
+            logger.info(
+                "VAE crisis model loaded from %s (threshold=%.6f, device=%s)",
+                dir_path, self._threshold, self._device,
             )
 
-        # load vocabulary
-        with vocab_path.open("r", encoding="utf-8") as fh:
-            vocab = json.load(fh)
+        except Exception as exc:
+            self.model_error = str(exc)
+            logger.warning("Failed to load VAE model: %s — using keyword fallback.", exc)
 
-        # sklearn's TfidfVectorizer accepts a vocabulary mapping token->index
-        self.vectorizer = TfidfVectorizer(vocabulary=vocab)
-
-        # load state dict and infer dimensions
-        map_device = device or ("cuda" if torch.cuda.is_available() else "cpu")
-        state = torch.load(state_path, map_location=map_device)
-
-        # infer dims from state dict keys
-        enc_w = None
-        mu_w = None
-        for k, v in state.items():
-            if k.endswith("encoder.0.weight"):
-                enc_w = v
-            if k.endswith("mu_layer.weight"):
-                mu_w = v
-
-        if enc_w is None or mu_w is None:
-            raise RuntimeError("Saved VAE state dict missing expected keys")
-
-        hidden_dim = int(enc_w.shape[0])
-        input_dim = int(enc_w.shape[1])
-        latent_dim = int(mu_w.shape[0])
-
-        self.device = torch.device(map_device)
-        self.model = TextVAE(input_dim=input_dim, hidden_dim=hidden_dim, latent_dim=latent_dim)
-        self.model.load_state_dict(state)
-        self.model.to(self.device)
-        self.model.eval()
-
-        # load threshold from stats if available, otherwise fall back
-        threshold_value = None
-        stats_path = Path(stats_path or "data/processed/vae_threshold_summary.json")
-        if stats_path.exists():
-            try:
-                with stats_path.open("r", encoding="utf-8") as fh:
-                    summary = json.load(fh)
-                threshold_value = float(summary.get("threshold", {}).get("value", CRISIS_THRESHOLD))
-            except Exception:
-                threshold_value = CRISIS_THRESHOLD
-
-        self.threshold = threshold_value if threshold_value is not None else CRISIS_THRESHOLD
-
-    def _vectorize(self, texts: list[str]) -> np.ndarray:
-        arr = self.vectorizer.transform(texts).toarray().astype(np.float32)
-        return arr
+    # ------------------------------------------------------------------
+    # Inference
+    # ------------------------------------------------------------------
 
     def score(self, text: str) -> float:
-        vec = self._vectorize([text])
-        tensor = torch.tensor(vec, dtype=torch.float32, device=self.device)
+        """Return reconstruction error for the input text.
+
+        Higher error → more anomalous → more likely crisis.
+        """
+        if self.model_loaded and self._model is not None and self._vectorizer is not None:
+            try:
+                return self._vae_score(text)
+            except Exception as exc:
+                logger.warning("VAE inference failed (%s) — falling back.", exc)
+
+        # Fallback: return a score below threshold for non-crisis keywords,
+        # and above threshold for known crisis language.
+        return self._keyword_score(text)
+
+    def _vae_score(self, text: str) -> float:
+        x = self._vectorizer.transform([text]).toarray().astype(np.float32)
+        tensor = torch.tensor(x, device=self._device)
         with torch.no_grad():
-            reconstructed, _, _ = self.model(tensor)
-            per_row = torch.mean((reconstructed - tensor) ** 2, dim=1)
-        return float(per_row.detach().cpu().numpy().item())
+            reconstructed, _, _ = self._model(tensor)
+        error = float(torch.mean((reconstructed - tensor) ** 2).item())
+        return error
+
+    @staticmethod
+    def _keyword_score(text: str) -> float:
+        crisis_markers = {
+            "suicide", "kill myself", "end my life", "self harm",
+            "want to die", "no reason to live", "can't go on", "cannot go on",
+        }
+        lowered = text.lower()
+        if any(m in lowered for m in crisis_markers):
+            return 1.0   # guaranteed above any reasonable threshold
+        return 0.0
 
     def is_crisis(self, text: str) -> bool:
-        return self.score(text) >= self.threshold
+        return self.score(text) >= self._threshold

@@ -3,26 +3,39 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from app.core.config import settings
 from app.core.constants import EMOTION_TOP_K_DEFAULT
 
 logger = logging.getLogger(__name__)
 
+GO_EMOTIONS_LABELS: List[str] = [
+    "admiration", "amusement", "anger", "annoyance", "approval", "caring",
+    "confusion", "curiosity", "desire", "disappointment", "disapproval",
+    "disgust", "embarrassment", "excitement", "fear", "gratitude", "grief",
+    "joy", "love", "nervousness", "optimism", "pride", "realization",
+    "relief", "remorse", "sadness", "surprise", "neutral",
+]
+
 # Path where the trained model is expected after Colab training.
-_MODEL_DIR = Path("models/bert_emotion/best_model")
+_MODEL_DIR = Path("models/bert_emotion/final_best_model")
 
 
 class BertEmotionClassifier:
-    """BERT classifier wrapper with a safe local fallback prediction path."""
+    """BERT multi-label emotion classifier with keyword fallback.
+
+    Attempts to load a fine-tuned DistilBERT/BERT model saved by train_bert.py.
+    Falls back to a lightweight keyword heuristic when the artifact is absent
+    so the API remains functional during development and demo without weights.
+    """
 
     def __init__(self) -> None:
         self.model_loaded = False
-        self.model_error: str | None = None
+        self.model_error: Optional[str] = None
         self._model = None
         self._tokenizer = None
-        self._label_list: List[str] = []
+        self._label_list: List[str] = GO_EMOTIONS_LABELS
 
         try:
             self._try_load_model()
@@ -30,6 +43,10 @@ class BertEmotionClassifier:
             self.model_error = str(exc)
             self.model_loaded = False
             logger.warning("BERT model not loaded, using keyword fallback: %s", exc)
+
+    # ------------------------------------------------------------------
+    # Loading
+    # ------------------------------------------------------------------
 
     def _try_load_model(self) -> None:
         """Attempt to load the trained model from disk."""
@@ -44,9 +61,10 @@ class BertEmotionClassifier:
         label_map_path = _MODEL_DIR / "label_map.json"
         if label_map_path.exists():
             raw = json.loads(label_map_path.read_text(encoding="utf-8"))
-            self._label_list = raw.get("labels", [])
+            if isinstance(raw.get("labels"), list):
+                self._label_list = raw["labels"]
 
-        import torch
+        import torch  # noqa: F401  (ensures torch is available before model load)
         from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
         self._tokenizer = AutoTokenizer.from_pretrained(str(_MODEL_DIR))
@@ -60,6 +78,10 @@ class BertEmotionClassifier:
 
         self.model_loaded = True
         logger.info("BERT emotion model loaded successfully from %s", _MODEL_DIR)
+
+    # ------------------------------------------------------------------
+    # Inference
+    # ------------------------------------------------------------------
 
     def predict(self, text: str) -> Dict[str, object]:
         """Return top emotion plus sorted emotion scores for the given text."""
@@ -113,47 +135,37 @@ class BertEmotionClassifier:
     def _keyword_fallback(self, text: str) -> Dict[str, object]:
         lowered = text.lower()
         scores: Dict[str, float] = {
-            "sadness": 0.18,
-            "neutral": 0.20,
-            "fear": 0.14,
-            "anger": 0.14,
-            "joy": 0.14,
-            "grief": 0.10,
-            "optimism": 0.10,
+            "sadness": 0.18, "neutral": 0.20, "fear": 0.14,
+            "anger": 0.14, "joy": 0.14, "grief": 0.10, "optimism": 0.10,
         }
 
-        sadness_markers = {"sad", "down", "low", "hopeless", "cry", "tired"}
-        fear_markers = {"anxious", "afraid", "scared", "panic", "worry"}
-        anger_markers = {"angry", "mad", "hate", "furious"}
-        joy_markers = {"happy", "great", "good", "excited", "grateful"}
+        sadness_markers = {"sad", "down", "low", "hopeless", "cry", "tired", "depressed", "empty"}
+        fear_markers    = {"anxious", "afraid", "scared", "panic", "worry", "dread", "terror"}
+        anger_markers   = {"angry", "mad", "hate", "furious", "rage", "frustrated"}
+        joy_markers     = {"happy", "great", "good", "excited", "grateful", "wonderful", "love"}
+        grief_markers   = {"grief", "loss", "mourn", "bereaved", "miss", "gone"}
 
-        if any(token in lowered for token in sadness_markers):
-            scores["sadness"] += 0.52
-            scores["neutral"] -= 0.10
-        if any(token in lowered for token in fear_markers):
-            scores["fear"] += 0.48
-            scores["neutral"] -= 0.08
-        if any(token in lowered for token in anger_markers):
-            scores["anger"] += 0.48
-            scores["neutral"] -= 0.08
-        if any(token in lowered for token in joy_markers):
-            scores["joy"] += 0.55
-            scores["neutral"] -= 0.10
+        if any(t in lowered for t in sadness_markers):
+            scores["sadness"] += 0.52; scores["neutral"] -= 0.10
+        if any(t in lowered for t in fear_markers):
+            scores["fear"] += 0.48; scores["neutral"] -= 0.08
+        if any(t in lowered for t in anger_markers):
+            scores["anger"] += 0.48; scores["neutral"] -= 0.08
+        if any(t in lowered for t in joy_markers):
+            scores["joy"] += 0.55; scores["neutral"] -= 0.10
+        if any(t in lowered for t in grief_markers):
+            scores["grief"] += 0.45; scores["neutral"] -= 0.08
 
-        clipped_scores = {
-            label: min(max(value, 0.0), 1.0) for label, value in scores.items()
-        }
-        sorted_scores: List[Dict[str, object]] = [
-            {"label": label, "confidence": confidence}
-            for label, confidence in sorted(
-                clipped_scores.items(), key=lambda item: item[1], reverse=True
-            )
-        ]
+        clipped = {label: min(max(v, 0.0), 1.0) for label, v in scores.items()}
+        sorted_scores: List[Dict[str, object]] = sorted(
+            [{"label": lbl, "confidence": conf} for lbl, conf in clipped.items()],
+            key=lambda x: float(x["confidence"]),
+            reverse=True,
+        )
 
         top_k = settings.emotion_top_k or EMOTION_TOP_K_DEFAULT
         top_emotions = sorted_scores[:top_k]
-
         return {
             "emotions": top_emotions,
-            "top_emotion": top_emotions[0]["label"] if top_emotions else "neutral",
+            "top_emotion": str(top_emotions[0]["label"]) if top_emotions else "neutral",
         }
