@@ -1,0 +1,49 @@
+{
+  "threshold": 0.0004967249697074294,
+  "threshold_percentile": 95,
+  "vae_metrics": {
+    "Precision": 0.46153846153846156,
+    "Recall": 0.0324,
+    "F1": 0.06054943001308167,
+    "Accuracy": 0.4973,
+    "TP": 162.0,
+    "FP": 189.0,
+    "FN": 4838.0,
+    "TN": 4811.0
+  },
+  "keyword_metrics": {
+    "Precision": 0.8679802955665025,
+    "Recall": 0.3524,
+    "F1": 0.5012802275960171,
+    "Accuracy": 0.6494,
+    "TP": 1762.0,
+    "FP": 268.0,
+    "FN": 3238.0,
+    "TN": 4732.0
+  },
+  "combined_metrics": {
+    "Precision": 0.8089061824470385,
+    "Recall": 0.3742,
+    "F1": 0.5116915082729386,
+    "Accuracy": 0.6429,
+    "TP": 1871.0,
+    "FP": 442.0,
+    "FN": 3129.0,
+    "TN": 4558.0
+  },
+  "detection_overlap": {
+    "vae_only": 109,
+    "keyword_only": 1709,
+    "both": 53,
+    "neither": 3129,
+    "total_crisis": 5000
+  },
+  "figures_saved": [
+    "crisis_error_distribution.png",
+    "crisis_method_comparison.png",
+    "crisis_confusion_matrices.png",
+    "crisis_threshold_sensitivity.png",
+    "crisis_dual_detection_analysis.png",
+    "crisis_error_analysis.png"
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "micro_f1": 0.5748276838825418,
+  "macro_f1": 0.4158449079709873,
+  "weighted_f1": 0.542976019995838,
+  "samples_f1": 0.5184755236164854,
+  "num_test_samples": 5427,
+  "num_labels": 28,
+  "threshold": 0.5,
+  "figures_saved": [
+    "emotion_per_label_f1.png",
+    "emotion_precision_recall_top15.png",
+    "emotion_label_support.png",
+    "emotion_topk_accuracy.png",
+    "emotion_confidence_distribution.png",
+    "emotion_cooccurrence_heatmap.png",
+    "emotion_f1_vs_support.png"
+  ]
+}

@@ -18,7 +18,8 @@ GO_EMOTIONS_LABELS: List[str] = [
     "relief", "remorse", "sadness", "surprise", "neutral",
 ]
 
-_DEFAULT_MODEL_DIR = "models/bert_emotion/final_best_model"
+# Path where the trained model is expected after Colab training.
+_MODEL_DIR = Path("models/bert_emotion/final_best_model")
 
 
 class BertEmotionClassifier:
@@ -29,85 +30,107 @@ class BertEmotionClassifier:
     so the API remains functional during development and demo without weights.
     """
 
-    def __init__(self, model_dir: Optional[str] = None) -> None:
+    def __init__(self) -> None:
         self.model_loaded = False
         self.model_error: Optional[str] = None
-        self._pipeline = None
-        self._labels: List[str] = GO_EMOTIONS_LABELS
+        self._model = None
+        self._tokenizer = None
+        self._label_list: List[str] = GO_EMOTIONS_LABELS
 
-        dir_path = Path(model_dir or _DEFAULT_MODEL_DIR)
-        if dir_path.exists():
-            self._try_load(dir_path)
-        else:
-            self.model_error = f"Model directory not found: {dir_path}"
-            logger.warning("BERT model not found at %s — using keyword fallback.", dir_path)
+        try:
+            self._try_load_model()
+        except Exception as exc:
+            self.model_error = str(exc)
+            self.model_loaded = False
+            logger.warning("BERT model not loaded, using keyword fallback: %s", exc)
 
     # ------------------------------------------------------------------
     # Loading
     # ------------------------------------------------------------------
 
-    def _try_load(self, dir_path: Path) -> None:
-        try:
-            from transformers import pipeline as hf_pipeline  # type: ignore
-
-            self._pipeline = hf_pipeline(
-                task="text-classification",
-                model=str(dir_path),
-                tokenizer=str(dir_path),
-                top_k=None,          # return scores for all labels
-                truncation=True,
-                max_length=128,
+    def _try_load_model(self) -> None:
+        """Attempt to load the trained model from disk."""
+        config_path = _MODEL_DIR / "config.json"
+        if not config_path.exists():
+            raise FileNotFoundError(
+                f"No trained model found at {_MODEL_DIR}. "
+                "Train the model using notebooks/train_bert_colab.ipynb first."
             )
 
-            # Refresh label list from saved label_map if present.
-            label_map_path = dir_path / "label_map.json"
-            if label_map_path.exists():
-                data = json.loads(label_map_path.read_text(encoding="utf-8"))
-                if isinstance(data.get("labels"), list):
-                    self._labels = data["labels"]
+        # Load label map if available, otherwise derive from config.json
+        label_map_path = _MODEL_DIR / "label_map.json"
+        if label_map_path.exists():
+            raw = json.loads(label_map_path.read_text(encoding="utf-8"))
+            if isinstance(raw.get("labels"), list):
+                self._label_list = raw["labels"]
 
-            self.model_loaded = True
-            logger.info("BERT emotion model loaded from %s", dir_path)
-        except Exception as exc:
-            self.model_error = str(exc)
-            logger.warning("Failed to load BERT model: %s — using keyword fallback.", exc)
+        import torch  # noqa: F401  (ensures torch is available before model load)
+        from transformers import AutoModelForSequenceClassification, AutoTokenizer
+
+        self._tokenizer = AutoTokenizer.from_pretrained(str(_MODEL_DIR))
+        self._model = AutoModelForSequenceClassification.from_pretrained(str(_MODEL_DIR))
+        self._model.eval()
+
+        # If we didn't get labels from label_map.json, read from the model config
+        if not self._label_list and hasattr(self._model.config, "id2label"):
+            id2label = self._model.config.id2label
+            self._label_list = [id2label[i] for i in sorted(id2label.keys())]
+
+        self.model_loaded = True
+        logger.info("BERT emotion model loaded successfully from %s", _MODEL_DIR)
 
     # ------------------------------------------------------------------
     # Inference
     # ------------------------------------------------------------------
 
     def predict(self, text: str) -> Dict[str, object]:
-        """Return top-k emotions and the highest-confidence label."""
-        if self.model_loaded and self._pipeline is not None:
-            try:
-                return self._bert_predict(text)
-            except Exception as exc:
-                logger.warning("BERT inference failed (%s) — using keyword fallback.", exc)
+        """Return top emotion plus sorted emotion scores for the given text."""
+        if not self.model_loaded or self._model is None:
+            return self._keyword_fallback(text)
 
-        return self._keyword_fallback(text)
+        try:
+            return self._model_predict(text)
+        except Exception as exc:
+            logger.warning("BERT inference failed, using fallback: %s", exc)
+            return self._keyword_fallback(text)
 
-    def _bert_predict(self, text: str) -> Dict[str, object]:
-        raw = self._pipeline(text)
-        # HF text-classification with top_k=None returns List[List[Dict]]
-        if isinstance(raw, list) and raw and isinstance(raw[0], list):
-            scores_list = raw[0]
-        elif isinstance(raw, list):
-            scores_list = raw
-        else:
-            scores_list = []
+    def _model_predict(self, text: str) -> Dict[str, object]:
+        """Run actual BERT inference with manual tokenization."""
+        import torch
 
-        sorted_scores: List[Dict[str, object]] = sorted(
-            [{"label": item["label"], "confidence": float(item["score"])}
-             for item in scores_list if "label" in item and "score" in item],
-            key=lambda x: float(x["confidence"]),
-            reverse=True,
+        inputs = self._tokenizer(
+            text, truncation=True, max_length=128, return_tensors="pt"
         )
+        # DistilBERT does not accept token_type_ids — remove if present
+        inputs.pop("token_type_ids", None)
+
+        with torch.no_grad():
+            outputs = self._model(**inputs)
+
+        # Apply sigmoid for multi-label probabilities
+        probs = torch.sigmoid(outputs.logits[0]).tolist()
+
+        # Build label → score mapping
+        id2label = self._model.config.id2label
+        scored = [
+            {"label": id2label[i], "score": probs[i]}
+            for i in range(len(probs))
+        ]
+        sorted_results = sorted(scored, key=lambda x: x["score"], reverse=True)
 
         top_k = settings.emotion_top_k or EMOTION_TOP_K_DEFAULT
-        top_emotions = sorted_scores[:top_k]
-        top_emotion = str(top_emotions[0]["label"]) if top_emotions else "neutral"
+        top_emotions: List[Dict[str, object]] = [
+            {
+                "label": item["label"],
+                "confidence": round(min(max(float(item["score"]), 0.0), 1.0), 4),
+            }
+            for item in sorted_results[:top_k]
+        ]
 
-        return {"emotions": top_emotions, "top_emotion": top_emotion}
+        return {
+            "emotions": top_emotions,
+            "top_emotion": top_emotions[0]["label"] if top_emotions else "neutral",
+        }
 
     def _keyword_fallback(self, text: str) -> Dict[str, object]:
         lowered = text.lower()

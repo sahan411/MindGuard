@@ -1,5 +1,5 @@
 {
-  "generated_at_utc": "2026-04-06T01:49:31.426018+00:00",
+  "generated_at_utc": "2026-04-05T14:03:04.478341+00:00",
   "datasets": {
     "go_emotions": {
       "dataset_id": "google-research-datasets/go_emotions",
@@ -34,21 +34,6 @@
             "id"
           ],
           "output": "data/raw/go_emotions/test.jsonl"
-        }
-      }
-    },
-    "amod_mh_counseling": {
-      "dataset_id": "Amod/mental_health_counseling_conversations",
-      "config_name": null,
-      "splits": {
-        "train": {
-          "rows": 3508,
-          "dropped_empty_rows": 4,
-          "columns": [
-            "Context",
-            "Response"
-          ],
-          "output": "data/raw/amod_mh_counseling/train.jsonl"
         }
       }
     }
